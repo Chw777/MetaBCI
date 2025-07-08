@@ -17,7 +17,8 @@ import random
 from scipy import signal
 from PIL import Image
 
-
+import pyttsx3
+from threading import Thread  # 用于异步播放语音，避免阻塞实验流程
 # prefunctions
 
 
@@ -1052,11 +1053,11 @@ class MI(VisualStim):
 
         self.tex_left = os.path.join(
             os.path.abspath(os.path.dirname(os.path.abspath(__file__))),
-            "textures" + os.sep + "left_hand.png",
+            "textures" + os.sep + "left_hand22.png",
         )
         self.tex_right = os.path.join(
             os.path.abspath(os.path.dirname(os.path.abspath(__file__))),
-            "textures" + os.sep + "right_hand.png",
+            "textures" + os.sep + "right_hand22.png",
         )
 
     def config_color(
@@ -2431,13 +2432,13 @@ def paradigm(
     index_time=1.0,
     rest_time=0.5,
     response_time=2,
-    image_time=2,
+    image_time=4,
     port_addr=9045,
     nrep=1,
     pdim="ssvep",
     lsl_source_id=None,
     online=None,
-    device_type="NeuroScan",
+    device_type="Neuracle",
 ):
     """
     The classical paradigm is implemented, the task flow is defined, the ' q '
@@ -2864,6 +2865,21 @@ def paradigm(
 
     elif pdim == "mi":
         # config experiment settings
+        # 初始化语音引擎
+        engine = pyttsx3.init()
+        # 设置语音速率（可选，默认适中）
+        engine.setProperty('rate', 150)
+        # 设置发音人（可选，根据系统安装的语音包调整）
+        voices = engine.getProperty('voices')
+
+        # 定义语音播放函数
+        def play_voice(text):
+            engine.say(text)
+            engine.runAndWait()
+
+        if len(voices) > 0:
+            engine.setProperty('voice', voices[0].id)  # 0通常为默认语音，可尝试1、2等切换
+
         conditions = [
             {"id": 0, "name": "left_hand"},
             {"id": 1, "name": "right_hand"},
@@ -2930,6 +2946,10 @@ def paradigm(
 
             # phase III: target stimulating
             iframe = 0
+            iframe = 0
+            voice_text = "左手" if id == 0 else "右手"  # 语音内容
+            Thread(target=play_voice, args=(voice_text,), daemon=True).start()  # 启动语音线程
+
             while iframe < int(fps * image_time):
                 if iframe == 0 and port and online:
                     VSObject.win.callOnFlip(port.setData, id + 1)
